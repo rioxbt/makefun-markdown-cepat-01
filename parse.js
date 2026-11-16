@@ -22,7 +22,7 @@
 // one passes, marked's own tokenizer still runs and still decides. `parse` instantiates a fresh lexer
 // for every call and keeps nothing between calls.
 
-import { Lexer, Parser, getDefaults } from './vendor/marked/marked.esm.js';
+import { Lexer, Parser, Tokenizer, getDefaults } from './vendor/marked/marked.esm.js';
 
 // marked's defaults, shared the way marked shares its own: the lexer and the parser fill in the
 // tokenizer and the renderer on this object once and reuse them (marked does the same to its defaults).
@@ -100,6 +100,99 @@ const CS_PIPE = 124;
 const CS_COLON = 58;
 const CS_DASH = 45;
 const CS_EQUALS = 61;
+
+// --- the inline lexer's first character: the same idea one level down -----------------------------
+//
+// marked's inline tokenizer runs the same eleven tokenizers at every step of every paragraph, on the
+// text left at that step, so all of their regexes are anchored and each is a fresh exec per step. Ten
+// of the eleven are settled by that step's first character (and, for the GFM url tokenizer, by whether
+// the word it starts is `www.`, an address, or a name followed by `:`), so each public tokenizer
+// method is wrapped in a guard that returns exactly what the tokenizer returns when it does not
+// match. As in blockTokens, every guard is a necessary condition only: when one passes, marked's own
+// tokenizer still runs and still decides. Only `inlineText`, the tokenizer of last resort, is left
+// unguarded.
+
+const tokenizerProto = Tokenizer.prototype;
+
+const origEscape = tokenizerProto.escape;
+tokenizerProto.escape = function (src) {
+  if (src.charCodeAt(0) !== 92) return undefined; // \
+  return origEscape.call(this, src);
+};
+
+const origTag = tokenizerProto.tag;
+tokenizerProto.tag = function (src) {
+  if (src.charCodeAt(0) !== 60) return undefined; // <
+  return origTag.call(this, src);
+};
+
+const origLink = tokenizerProto.link;
+tokenizerProto.link = function (src) {
+  const c = src.charCodeAt(0);
+  if (c !== 91 && c !== 33) return undefined; // [ or !
+  return origLink.call(this, src);
+};
+
+const origReflink = tokenizerProto.reflink;
+tokenizerProto.reflink = function (src, links) {
+  const c = src.charCodeAt(0);
+  if (c !== 91 && c !== 33) return undefined; // [ or !
+  return origReflink.call(this, src, links);
+};
+
+const origEmStrong = tokenizerProto.emStrong;
+tokenizerProto.emStrong = function (src, tokens, lastChar) {
+  const c = src.charCodeAt(0);
+  if (c !== 42 && c !== 95) return undefined; // * or _
+  return origEmStrong.call(this, src, tokens, lastChar);
+};
+
+const origCodespan = tokenizerProto.codespan;
+tokenizerProto.codespan = function (src) {
+  if (src.charCodeAt(0) !== 96) return undefined; // `
+  return origCodespan.call(this, src);
+};
+
+const origBr = tokenizerProto.br;
+tokenizerProto.br = function (src) {
+  const c = src.charCodeAt(0);
+  if (c !== 32 && c !== 92) return undefined; // space or \
+  return origBr.call(this, src);
+};
+
+const origDel = tokenizerProto.del;
+tokenizerProto.del = function (src, tokens, lastChar) {
+  if (src.charCodeAt(0) !== 126) return undefined; // ~
+  return origDel.call(this, src, tokens, lastChar);
+};
+
+const origAutolink = tokenizerProto.autolink;
+tokenizerProto.autolink = function (src) {
+  if (src.charCodeAt(0) !== 60) return undefined; // <
+  return origAutolink.call(this, src);
+};
+
+/** Is `[A-Za-z0-9._+-]`? The one character a GFM url, an address or a scheme can start with. */
+function urlChar(c) {
+  return (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 46 || c === 95 || c === 43 || c === 45;
+}
+
+const origUrl = tokenizerProto.url;
+tokenizerProto.url = function (src) {
+  // url: `www.…`, `<scheme>://…`, `mailto:`/`xmpp:`…, or an address `word@host.tld`. The schemes and
+  // the address forms need a `:` or an `@` right where the leading `[A-Za-z0-9._+-]` run ends; the
+  // `www.` form needs its own dot. Anything else cannot match any of them.
+  if (!urlChar(src.charCodeAt(0))) return undefined;
+  if (src.charCodeAt(0) === 119 && src.charCodeAt(1) === 119 && src.charCodeAt(2) === 119 && src.charCodeAt(3) === 46) {
+    return origUrl.call(this, src); // www.
+  }
+  let i = 0;
+  const n = src.length;
+  while (i < n && urlChar(src.charCodeAt(i))) i++;
+  const after = src.charCodeAt(i);
+  if (after !== 64 && after !== 58) return undefined; // @ or :
+  return origUrl.call(this, src);
+};
 
 /** marked's Lexer#blockTokens with the necessary-condition guards described above. */
 class FastLexer extends Lexer {
