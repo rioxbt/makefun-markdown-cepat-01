@@ -44,6 +44,13 @@ process, CPU time of the parse loop:
 
 Identical HTML on 720 of 720 practice cases; 1.074x faster than marked.
 
+## Third-party code
+
+`vendor/marked/marked.esm.js` is marked 18.1.3's npm build, vendored byte for byte and **not
+modified** — MIT, Copyright (c) 2018+, MarkedJS; Copyright (c) 2011-2018, Christopher Jeffrey, with
+its own `LICENSE` and `NOTICE` beside it in `vendor/marked/`. Only the reference renderer lives
+there; the entry's own code is `parse.js` and `main.ts`.
+
 ## Run it
 
 ```sh

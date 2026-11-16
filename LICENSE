@@ -1,6 +1,6 @@
-MIT License
-
 SPDX-License-Identifier: MIT
+
+MIT License
 
 Copyright (c) 2026 rioxbt
 
@@ -21,12 +21,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This repository vendors marked 18.1.3 (vendor/marked/marked.esm.js), MIT,
-Copyright (c) 2018+, MarkedJS; Copyright (c) 2011-2018, Christopher Jeffrey,
-with its own LICENSE and NOTICE beside it in vendor/marked/. It is vendored
-byte for byte and is not modified; parse.js subclasses its Lexer and overrides
-Lexer#blockTokens, importing the rest of its lexer, parser and renderer
-unchanged.
