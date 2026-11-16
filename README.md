@@ -34,15 +34,21 @@ Everything else is marked 18.1.3's own vendored code (`vendor/marked/marked.esm.
 LICENSE and NOTICE beside it); `parse` instantiates a fresh lexer for every call and keeps nothing
 between calls.
 
-Measured on the kit's practice set (720 cases, ~2.9 MB) on one CPU, interleaved A/B in a single
-process, CPU time of the parse loop:
+Measured on the kit's practice set (720 cases, ~2.9 MB) with marked's own driver, interleaved A/B in
+one process, CPU time of the parse loop (one representative run of nine, baseline and entry
+alternating each round):
 
 | | CPU ms (min) | CPU ms (median) |
 |---|---|---|
 | marked 18.1.3 (house baseline) | 610.6 | 704.7 |
 | this entry | 568.8 | 654.3 |
 
-Identical HTML on 720 of 720 practice cases; 1.074x faster than marked.
+Identical HTML on 720 of 720 practice cases, and the kit's own sealed scorer reports
+`{"cases_passed":720,"cases_total":720,"passed":1}` (720 of 720 points over 71 checks). The machine
+these numbers come from has two cores and was shared while they were taken, so the run-to-run spread
+is wide: across repeated interleaved A/B runs the paired ratio (marked's CPU time over this entry's)
+landed between **1.04x and 1.19x**, with a pooled median of about **1.06x** — a real but modest
+margin, not a large one.
 
 ## Third-party code
 
