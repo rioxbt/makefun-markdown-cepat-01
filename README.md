@@ -29,26 +29,35 @@ row must begin with `|`, `:` or `-`, and the setext heading, whose underline is 
 `=` or `-`) get a cheap necessary-condition test of their own first. Every guard is a necessary
 condition only: when one passes, marked's own tokenizer still runs and still decides the token.
 
+The same idea one level down: marked's inline tokenizer runs its eleven tokenizers at every step of
+every paragraph, on the text left at that step, so each of their anchored regexes is a fresh exec per
+step. Ten of the eleven are settled by that step's first character — an escape needs `\`, a tag or an
+autolink needs `<`, a link or a reference link needs `[` or `!`, emphasis needs `*` or `_`, a code span
+needs `` ` ``, a hard break needs a space or `\`, strikethrough needs `~` — and the GFM url tokenizer
+needs a word that is `www.…`, a scheme followed by `:`, or an address with an `@` where its leading
+`[A-Za-z0-9._+-]` run ends. So each of those ten public tokenizer methods is wrapped in the same kind
+of guard. Only `inlineText`, the tokenizer of last resort, is left unguarded.
+
 Everything else is marked 18.1.3's own vendored code (`vendor/marked/marked.esm.js`, sha256
 `e76f3b37046a5d294159872002e5f6fcda8ed232e1be45ff76b3863f2919dae3`, MIT, unmodified, with its
 LICENSE and NOTICE beside it); `parse` instantiates a fresh lexer for every call and keeps nothing
 between calls.
 
 Measured on the kit's practice set (720 cases, ~2.9 MB) with marked's own driver, interleaved A/B in
-one process, CPU time of the parse loop (one representative run of nine, baseline and entry
+one process, CPU time of the parse loop (one representative run of fifteen, baseline and entry
 alternating each round):
 
 | | CPU ms (min) | CPU ms (median) |
 |---|---|---|
-| marked 18.1.3 (house baseline) | 610.6 | 704.7 |
-| this entry | 568.8 | 654.3 |
+| marked 18.1.3 (house baseline) | 593.6 | 642.7 |
+| this entry | 550.9 | 575.7 |
 
 Identical HTML on 720 of 720 practice cases, and the kit's own sealed scorer reports
 `{"cases_passed":720,"cases_total":720,"passed":1}` (720 of 720 points over 71 checks). The machine
 these numbers come from has two cores and was shared while they were taken, so the run-to-run spread
 is wide: across repeated interleaved A/B runs the paired ratio (marked's CPU time over this entry's)
-landed between **1.04x and 1.19x**, with a pooled median of about **1.06x** — a real but modest
-margin, not a large one.
+had a pooled median of about **1.09x**, with per-round ratios over the runs landing between 0.82 and
+1.39 and the ratio of the two minima at 1.08–1.11x. A real but modest margin, not a large one.
 
 ## Third-party code
 
